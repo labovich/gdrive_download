@@ -34,7 +34,7 @@ class Drive:
                 os.remove(file_path)
                 print('Removed.')
         else:
-            print(f"File {obj['name']} alredy exist.")
+            print(f"File {file_path} alredy exist.")
 
     def folder(self, folder_id, parent_path, age_token=None):
         kwargs = {
