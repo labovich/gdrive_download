@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import os
 
@@ -28,9 +30,17 @@ class Drive:
         else:
             print(f"File {obj['name']} alredy exist.")
 
-    def folder(self, folder_id, parent_path):
-        results = self.service.files().list(fields="nextPageToken, files(id, name, mimeType)",
-                                            q=f"'{folder_id}' in parents").execute()
+    def folder(self, folder_id, parent_path, next_page_token=None):
+        kwargs = {
+            'fields': "nextPageToken, files(id, name, mimeType)",
+            'q': f"'{folder_id}' in parents",
+            'pageSize': 20
+        }
+
+        if next_page_token is not None:
+            kwargs['pageToken'] = next_page_token
+
+        results = self.service.files().list(**kwargs).execute()
 
         for obj in results.get('files', []):
             if obj['mimeType'] == 'application/vnd.google-apps.folder':
@@ -40,6 +50,10 @@ class Drive:
                 self.folder(obj['id'], path)
             else:
                 self.download(obj, parent_path)
+
+        next_pt = results.get('nextPageToken')
+        if next_pt:
+            self.folder(folder_id, parent_path, next_pt)
 
 
 def get_parser():
