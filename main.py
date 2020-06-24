@@ -8,6 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+PAGE_SIZE = 50
 
 
 class Drive:
@@ -21,24 +22,29 @@ class Drive:
 
         if not os.path.isfile(file_path):
             request = self.service.files().get_media(fileId=obj['id'])
-            with open(file_path, 'wb') as f:
-                downloader = MediaIoBaseDownload(f, request)
-                done = False
-                while done is False:
-                    status, done = downloader.next_chunk()
-                    print("Download {} {}%".format(obj['name'], int(status.progress() * 100)))
+            try:
+                with open(file_path, 'wb') as f:
+                    downloader = MediaIoBaseDownload(f, request)
+                    done = False
+                    while done is False:
+                        status, done = downloader.next_chunk()
+                        print("Download {} {}%".format(file_path, int(status.progress() * 100)))
+            except Exception:
+                print(f'Remove unfinished file {file_path} ...')
+                os.remove(file_path)
+                print('Removed.')
         else:
             print(f"File {obj['name']} alredy exist.")
 
-    def folder(self, folder_id, parent_path, next_page_token=None):
+    def folder(self, folder_id, parent_path, age_token=None):
         kwargs = {
             'fields': "nextPageToken, files(id, name, mimeType)",
             'q': f"'{folder_id}' in parents",
-            'pageSize': 20
+            'pageSize': PAGE_SIZE
         }
 
-        if next_page_token is not None:
-            kwargs['pageToken'] = next_page_token
+        if age_token is not None:
+            kwargs['pageToken'] = age_token
 
         results = self.service.files().list(**kwargs).execute()
 
@@ -51,9 +57,9 @@ class Drive:
             else:
                 self.download(obj, parent_path)
 
-        next_pt = results.get('nextPageToken')
-        if next_pt:
-            self.folder(folder_id, parent_path, next_pt)
+        next_page_token = results.get('nextPageToken')
+        if next_page_token:
+            self.folder(folder_id, parent_path, next_page_token)
 
 
 def get_parser():
